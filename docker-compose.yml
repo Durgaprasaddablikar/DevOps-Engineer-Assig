@@ -1,0 +1,63 @@
+## docker-compose.yml
+version: "3.9"
+
+
+name: mean-crud-app
+
+
+services:
+mongo:
+image: mongo:7
+container_name: mongo
+restart: unless-stopped
+ports:
+- "27017:27017" # expose only if you need local access; otherwise remove
+environment:
+MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+volumes:
+- mongo_data:/data/db
+
+
+backend:
+image: ${DOCKERHUB_USERNAME}/mean-backend:${IMAGE_TAG}
+container_name: backend
+restart: unless-stopped
+env_file: .env
+environment:
+PORT: 3000
+NODE_ENV: ${NODE_ENV}
+MONGO_URL: ${MONGO_URL}
+CORS_ORIGIN: ${CORS_ORIGIN}
+depends_on:
+- mongo
+ports:
+- "3000:3000" # optional; reverse proxy handles external traffic
+
+
+frontend:
+image: ${DOCKERHUB_USERNAME}/mean-frontend:${IMAGE_TAG}
+container_name: frontend
+restart: unless-stopped
+env_file: .env
+depends_on:
+- backend
+ports:
+- "8080:80" # optional; reverse proxy handles external traffic
+
+
+nginx:
+image: nginx:alpine
+container_name: reverse-proxy
+restart: unless-stopped
+depends_on:
+- frontend
+- backend
+ports:
+- "80:80"
+volumes:
+- ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+
+volumes:
+mongo_data:
